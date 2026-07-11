@@ -4,95 +4,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-java@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Build
+
+      - name: Create and Build Project
         run: |
           mkdir -p app/src/main/java/com/noxvix/screenmask app/src/main/res/layout
-          echo 'rootProject.name="M";include":app"' > settings.gradle
-          echo 'buildscript{repositories{google();mavenCentral()}dependencies{classpath"com.android.tools.build:gradle:8.2.2"}}allprojects{repositories{google();mavenCentral()}}' > build.gradle
-          echo 'apply plugin:"com.android.application";android{compileSdk 34;namespace "com.noxvix.screenmask";defaultConfig{minSdk 26;targetSdk 34};compileOptions{sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17}}' > app/build.gradle
-          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.noxvix.screenmask"><uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE"/><application android:label="Masker"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity><service android:name=".OverlayService" android:exported="false"/></application></manifest>' > app/src/main/AndroidManifest.xml
-          echo 'package com.noxvix.screenmask;import android.app.Activity;import android.content.Intent;import android.net.Uri;import android.os.Build;import android.os.Bundle;import android.provider.Settings;public class MainActivity extends Activity{@Override protected void onCreate(Bundle b){super.onCreate(b);if(Build.VERSION.SDK_INT>=23&&!Settings.canDrawOverlays(this)){startActivityForResult(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())),1);}else{startService(new Intent(this,OverlayService.class));}finish();}}' > app/src/main/java/com/noxvix/screenmask/MainActivity.java
-          echo 'package com.noxvix.screenmask;import android.app.*;import android.content.Intent;import android.graphics.*;import android.os.*;import android.view.*;public class OverlayService extends Service{View m;@Override public void onCreate(){super.onCreate();WindowManager w=(WindowManager)getSystemService(WINDOW_SERVICE);WindowManager.LayoutParams p=new WindowManager.LayoutParams(35,WindowManager.LayoutParams.MATCH_PARENT,Build.VERSION.SDK_INT>=26?2038:2002,280,PixelFormat.TRANSLUCENT);p.gravity=Gravity.START|Gravity.TOP;m=new View(this);m.setBackgroundColor(Color.BLACK);w.addView(m,p);if(Build.VERSION.SDK_INT>=26){NotificationChannel c=new NotificationChannel("C","M",NotificationManager.IMPORTANCE_LOW);((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(c);startForeground(1,new Notification.Builder(this,"C").setSmallIcon(android.R.drawable.ic_menu_compass).build());}}@Override public IBinder onBind(Intent i){return null;}@Override public void onDestroy(){super.onDestroy();((WindowManager)getSystemService(WINDOW_SERVICE)).removeView(m);}}' > app/src/main/java/com/noxvix/screenmask/OverlayService.java
+          echo 'include ":app"' > settings.gradle
+          echo 'buildscript { repositories { google(); mavenCentral() } ; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } } ; allprojects { repositories { google(); mavenCentral() } }' > build.gradle
+          echo 'apply plugin: "com.android.application" ; android { compileSdk 34 ; namespace "com.noxvix.screenmask" ; defaultConfig { minSdk 26 ; targetSdk 34 } ; compileOptions { sourceCompatibility JavaVersion.VERSION_17 ; targetCompatibility JavaVersion.VERSION_17 } }' > app/build.gradle
+          echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.noxvix.screenmask"><uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE"/><application android:label="Masker"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity><service android:name=".OverlayService" android:exported="false"/></application></manifest>' > app/src/main/AndroidManifest.xml
+          echo 'package com.noxvix.screenmask; import android.app.Activity; import android.content.Intent; import android.net.Uri; import android.os.Build; import android.os.Bundle; import android.provider.Settings; public class MainActivity extends Activity { @Override protected void onCreate(Bundle b) { super.onCreate(b); if(Build.VERSION.SDK_INT>=23 && !Settings.canDrawOverlays(this)) { startActivityForResult(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName())), 1); } else { startService(new Intent(this, OverlayService.class)); } finish(); } }' > app/src/main/java/com/noxvix/screenmask/MainActivity.java
+          echo 'package com.noxvix.screenmask; import android.app.*; import android.content.Intent; import android.graphics.*; import android.os.*; import android.view.*; public class OverlayService extends Service { View m; @Override public void onCreate() { super.onCreate(); WindowManager w = (WindowManager)getSystemService(WINDOW_SERVICE); WindowManager.LayoutParams p = new WindowManager.LayoutParams(35, WindowManager.LayoutParams.MATCH_PARENT, Build.VERSION.SDK_INT>=26 ? 2038 : 2002, 280, PixelFormat.TRANSLUCENT); p.gravity = Gravity.START | Gravity.TOP; m = new View(this); m.setBackgroundColor(Color.BLACK); w.addView(m, p); if(Build.VERSION.SDK_INT>=26) { NotificationChannel c = new NotificationChannel("C", "M", NotificationManager.IMPORTANCE_LOW); ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(c); startForeground(1, new Notification.Builder(this, "C").setSmallIcon(android.R.drawable.ic_dialog_info).build()); } } @Override public IBinder onBind(Intent i) { return null; } @Override public void onDestroy() { super.onDestroy(); ((WindowManager)getSystemService(WINDOW_SERVICE)).removeView(m); } }' > app/src/main/java/com/noxvix/screenmask/OverlayService.java
           gradle wrapper --gradle-version 8.2 --distribution-type bin
           ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: screen-masker-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-              }
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          dependencies {
-              implementation "androidx.core:core:1.12.0"
-              implementation "androidx.appcompat:appcompat:1.6.1"
-          }
-          EOF
-
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.noxvix.screenmask">
-              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <application android:label="Screen Masker" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-                  <service android:name=".OverlayService" android:exported="false" />
-              </application>
-          </manifest>
-          EOF
-
-          cat << 'EOF' > app/src/main/java/com/noxvix/screenmask/MainActivity.java
-          package com.noxvix.screenmask;
-          import android.content.Intent;
-          import android.net.Uri;
-          import android.os.Build;
-          import android.os.Bundle;
-          import android.provider.Settings;
-          import android.widget.Button;
-          import android.widget.LinearLayout;
-          import android.widget.TextView;
-          import android.view.Gravity;
-          import android.graphics.Color;
-          import androidx.appcompat.app.AppCompatActivity;
-
-          public class MainActivity extends AppCompatActivity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  LinearLayout layout = new LinearLayout(this);
-                  layout.setOrientation(LinearLayout.VERTICAL);
-                  layout.setGravity(Gravity.CENTER);
-                  layout.setBackgroundColor(Color.parseColor("#121212"));
-
-                  TextView text = new TextView(this);
-                  text.setText("Screen Masker");
-                  text.setTextColor(Color.WHITE);
-                  text.setTextSize(24f);
-                  text.setPadding(0, 0, 0, 50);
-
-                  Button btnStart = new Button(this);
-                  btnStart.setText("Enable Mask");
-                  btnStart.setOnClickListener(v -> {
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                          startActivityForResult(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())), 101);
-                      } else {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                              startForegroundService(new Intent(this, OverlayService.class));
-                          } else {
-                              startService(new Intent(this, OverlayService.class));
-                          }
-                      }
-                  });
-
-                  Button
